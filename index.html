@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Using Anthropic for Drafting Quiz</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .quiz-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .welcome-screen, .name-screen, .completion-screen {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .question {
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .options {
+            margin-bottom: 15px;
+        }
+        .option {
+            display: block;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .option:hover {
+            background-color: #f0f0f0;
+        }
+        .selected {
+            background-color: #e0e0ff;
+            border-color: #b0b0ff;
+        }
+        .btn {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .btn.skip {
+            background-color: #ff9800;
+        }
+        .btn.skip:hover {
+            background-color: #e68a00;
+        }
+        .btn.restart {
+            background-color: #f44336;
+        }
+        .btn.restart:hover {
+            background-color: #d32f2f;
+        }
+        .btn.download {
+            background-color: #2196F3;
+            margin-top: 20px;
+        }
+        .btn.download:hover {
+            background-color: #0b7dda;
+        }
+        .progress {
+            margin-bottom: 20px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            height: 10px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.3s ease;
+        }
+        .feedback {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .quiz-title {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 5px;
+            margin-bottom: 20px;
+        }
+        .score-display {
+            font-weight: bold;
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        .button-container {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .name-input {
+            width: 100%;
+            padding: 10px;
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .results-container {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            background-color: #f9f9f9;
+        }
+        .result-item {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .certificate {
+            border: 5px solid #4CAF50;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+            background-color: #f9f9f9;
+        }
+        .certificate h2 {
+            color: #4CAF50;
+        }
+        .hidden {
+            display: none;
+        }
+        .question-counter {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .perfect-score {
+            color: #155724;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .incomplete-score {
+            color: #721c24;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        .quiz-results {
+            text-align: left;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 15px;
+            background-color: #f9f9f9;
+        }
+        .attempts-info {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #e8f4f8;
+            border-radius: 5px;
+            text-align: left;
+        }
+        .incorrect-answers {
+            color: #721c24;
+            background-color: #f8d7da;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            text-align: left;
+        }
+        .attempt-history {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .attempt-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+        }
+        .download-section {
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Welcome Screen -->
+        <div id="welcome-screen" class="welcome-screen">
+            <h1>Using Anthropic for Drafting Quiz</h1>
+            <p>Welcome to the Using Anthropic for Drafting Quiz.</p>
+            <p>This quiz contains 30 questions about using Anthropic for drafting content.</p>
+            <p><strong>You must answer all 30 questions correctly (30/30) to complete the quiz successfully.</strong></p>
+            <p>You can skip questions and return to them later, but you must get every question right to pass.</p>
+            <button id="start-btn" class="btn">I'm Ready to Start</button>
+        </div>
+
+        <!-- Name Input Screen -->
+        <div id="name-screen" class="name-screen hidden">
+            <h1>Enter Your Name</h1>
+            <p>Please enter your full name to begin the quiz:</p>
+            <input type="text" id="user-name" class="name-input" placeholder="Your Full Name">
+            <button id="submit-name-btn" class="btn">Start Quiz</button>
+        </div>
+
+        <!-- Quiz Container -->
+        <div id="quiz-section" class="hidden">
+            <div class="progress">
+                <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+            </div>
+            <h2 class="quiz-title">Using Anthropic for Drafting Quiz</h2>
+            <div class="question-counter">Question <span id="question-number">1</span> of 30</div>
+            <div class="score-display">Correct Answers: <span id="correct-count">0</span>/30</div>
+            <div id="feedback" class="feedback"></div>
+            <div class="quiz-container" id="quiz-container">
+                <div class="question" id="question"></div>
+                <div class="options" id="options"></div>
+                <div class="button-container">
+                    <button class="btn" id="submit-btn">Submit Answer</button>
+                    <button class="btn skip" id="skip-btn">Skip Question</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completion Screen -->
+        <div id="completion-screen" class="completion-screen hidden">
+            <h1>Quiz Completed!</h1>
+            <div id="completion-message"></div>
+            <div id="certificate-section" class="hidden">
+                <div class="certificate">
+                    <h2>Certificate of Completion</h2>
+                    <p>This certifies that</p>
+                    <h3 id="certificate-name"></h3>
+                    <p>has successfully completed the Using Anthropic for Drafting Quiz</p>
+                    <p>with a perfect score of 30/30</p>
+                    <p>Date: <span id="completion-date"></span></p>
+                </div>
+                <div id="attempts-info" class="attempts-info"></div>
+                <div id="quiz-results" class="quiz-results"></div>
+                <div class="download-section">
+                    <button id="download-report-btn" class="btn download">Download Complete Quiz Report</button>
+                </div>
+            </div>
+            <button class="btn restart" id="restart-quiz-btn">Start New Quiz</button>
+        </div>
+    </div>
+
+    <script>
+        // Quiz data structure
+        const quizQuestions = [
+            {
+                question: "After receiving the verification email from Anthropic Console, what should you click on?",
+                options: [
+                    "Verify Account",
+                    "Sign in to Anthropic Console",
+                    "Confirm Email",
+                    "Access Dashboard"
+                ],
+                correctAnswer: 1
+            },
+            {
+                question: "Where do you navigate after accessing the Dashboard of Anthropic Console?",
+                options: [
+                    "Settings",
+                    "Workbench",
+                    "Templates",
+                    "Projects"
+                ],
+                correctAnswer: 1
+            },
+            {
+                question: "Which setting should be adjusted to control the randomness of AI responses?",
+                options: [
+                    "Tokens",
+                    "Temperature",
+                    "Creativity",
+                    "Randomness"
+                ],
+                correctAnswer: 1
+            },
+            {
+                question: "What is the recommended Temperature setting for drafting according to the instructions?",
+                options: [
+                    "0.1 or 0.2",
+                    "0.3 or 0.4",
+                    "0.5 or 0.6",
+                    "0.7 or 0.8"
+                ],
+                correctAnswer: 1
+            },
+            {
+                question: "How should the Tokens setting be configured?",
+                options: [
+                    "Minimum",
+                    "Medium",
+                    "Maximum",
+                    "Default"
+                ],
+                correctAnswer: 2
+            },
+            {
+                question: "What should be copied and pasted first into the User box?",
+                options: [
+                    "User Message",
+                    "System Message",
+                    "Legislation",
+                    "Explanatory memorandum"
+                ],
+                correctAnswer: 1
+            },
+            {
+                question: "After pasting the System Message, what action should be taken?",
+                options: [
+                    "Click Add to Conversation",
+                    "Click Save and Run",
+                    "Click Get Code",
+                    "Click Model Settings"
+                ],
+                correctAnswer: 1
+            },
+            {
+                question: "What should be included in the User Message?",
+                options: [
+                    "Only the legislation",
+                    "Only the explanatory memorandum",
+                    "Both legislation and explanatory memorandum",
+                    "Neither legislation nor explanatory memorandum"
+                ],
+                correctAnswer: 2
+            },
+            {
+                question: "Where should the legislation and explanatory memorandum be inserted in the User Message?",
+                options: [
+                    "At the beginning",
+                    "At the end",
+                    "In the {{}} placeholders",
+                    "In quotation marks"
+                ],
+                correctAnswer: 2
+            },
+            {
+                question: "After pasting the User Message, what action should be taken?",
+                options: [
+                    "Click Add to Conversation",
+                    "Click Save and Run",
+                    "Click Get Code",
+                    "Click Model Settings"
+                ],
+                correctAnswer: 1
+            },
+            {
+                question: "Where should Anthropic's response be copied to?",
+                options: [
+                    "Alert Template",
+                    "System Message",
+                    "User Message",
+                    "Notepad"
+                ],
+                correctAnswer: 0
+            },
+            {
+                question: "If you are not satisfied with the draft, what should you click to refine it?",
+                options: [
+                    "Save and Run",
+                    "Get Code",
+                    "Add to Conversation",
+                    "Model Settings"
+                ],
+                correctAnswer: 2
+            },
+            {
+                question: "What should be used to refine the draft?",
+                options: [
+                    "System Message",
+                    "User Message",
+                    "Prompts from Review and Finalising AI Drafted Alerts",
+                    "Legislation"
+                ],
+                correctAnswer: 2
+            },
+            {
+                question: "Once satisfied with Anthropic's response, what should you click?",
+                options: [
+                    "Save and Run",
+                    "Get Code",
+                    "Add to Conversation",
+                    "Model Settings"
+                ],
+                correctAnswer: 1
+            },
+            {
+                question: "Where should the code be saved?",
+                options: [
+                    "In a Word document",
+                    "In a notepad with the [Alert Code] title",
+                    "In the Anthropic Console",
+                    "In the Alert Template"
+                ],
+                correctAnswer: 1
+            },
+            {
+                question: "Where should the final code be saved?",
+                options: [
+                    "Personal folder",
+                    "Desktop",
+                    "AI Records Shared Folder",
+                    "Temporary folder"
+                ],
+                correctAnswer: 2
+            },
+            {
+                question: "What type of questions should be avoided when prompting Anthropic?",
+                options: [
+                    "Open-ended questions",
+                    "Assuming questions",
+                    "Technical questions",
+                    "Legal questions"
+                ],
+                correctAnswer: 1
+            },
+            {
+                question: "What type of questions should be asked when prompting Anthropic?",
+                options: [
+                    "Leading questions",
+                    "Closed-ended questions",
+                    "Open-ended questions",
+                    "Yes/no questions"
+                ],
+                correctAnswer: 2
+            },
+            {
+                question: "What might Anthropic struggle with according to the instructions?",
+                options: [
+                    "Legal terminology",
+                    "Staggered commencement dates",
+                    "Technical language",
+                    "Long documents"
+                ],
+                correctAnswer: 1
+            },
+            {
+                question: "What might happen if you pose an assuming question to Anthropic?",
+                options: [
+                    "It will provide a more accurate response",
+                    "It may 'incorrectly' correct itself",
+                    "It will refuse to answer",
+                    "It will ask for clarification"
+                ],
+                correctAnswer: 1
+            },
+            {
+                question: "What additional action might be needed for staggered commencement dates?",
+                options: [
+                    "Only manual revision",
+                    "Only further prompting",
+                    "Both further prompting and manual revision",
+                    "Neither further prompting nor manual revision"
+                ],
+                correctAnswer: 2
+            },
+            {
+                question: "What is the purpose of setting the Temperature to 0.3 or 0.4?",
+                options: [
+                    "To make the AI more creative",
+                    "To make the AI more consistent and predictable",
+                    "To reduce the processing time",
+                    "To increase the token limit"
+                ],
+                correctAnswer: 1
+            },
+            {
+                question: "What is the purpose of setting the Tokens to Max?",
+                options: [
+                    "To allow for longer responses",
+                    "To make the AI more creative",
+                    "To reduce the processing time",
+                    "To make the AI more consistent"
+                ],
+                correctAnswer: 0
+            },
+            {
+                question: "After pasting the System Message and clicking Save and Run, you notice an error in the message. What should you do?",
+                options: [
+                    "Continue with the User Message anyway",
+                    "Click Add to Conversation and correct the error",
+                    "Start a new conversation",
+                    "Ignore the error as it won't affect the output"
+                ],
+                correctAnswer: 2
+            },
+            {
+                question: "You've set the Temperature to 0.8 instead of the recommended 0.3 or 0.4. What might happen?",
+                options: [
+                    "The AI will provide more consistent responses",
+                    "The AI will provide more creative and varied responses",
+                    "The AI will refuse to generate a response",
+                    "The AI will process the request faster"
+                ],
+                correctAnswer: 1
+            },
+            {
+                question: "You're working with legislation that has staggered commencement dates. What approach should you take?",
+                options: [
+                    "Rely solely on Anthropic's output",
+                    "Manually revise the dates without prompting Anthropic",
+                    "Use additional prompting and then manually revise",
+                    "Ignore the commencement dates in your draft"
+                ],
+                correctAnswer: 2
+            },
+            {
+                question: "You need to draft an alert for legislation with complex technical terminology. What's the best approach?",
+                options: [
+                    "Simplify the terminology before inputting it to Anthropic",
+                    "Include the exact terminology and provide context in your prompts",
+                    "Ask Anthropic to simplify the terminology",
+                    "Avoid using Anthropic for complex terminology"
+                ],
+                correctAnswer: 1
+            },
+            {
+                question: "After multiple refinement attempts, Anthropic still struggles with a particular aspect of your draft. What should you do?",
+                options: [
+                    "Keep trying with different prompts",
+                    "Accept the limitations and manually revise that section",
+                    "Start a new conversation with different settings",
+                    "Use a different AI tool entirely"
+                ],
+                correctAnswer: 1
+            },
+            {
+                question: "You need to draft an alert quickly but also need high accuracy. Which Temperature setting should you choose?",
+                options: [
+                    "0.1",
+                    "0.3",
+                    "0.7",
+                    "1.0"
+                ],
+                correctAnswer: 1
+            },
+            {
+                question: "You're working with legislation that has been amended multiple times. What's the best approach for drafting?",
+                options: [
+                    "Only include the most recent version",
+                    "Include all versions chronologically",
+                    "Include the consolidated version with clear indication of amendments",
+                    "Draft separate alerts for each version"
+                ],
+                correctAnswer: 2
+            }
+        ];
+
+        // Quiz state
+        let userName = "";
+        let currentQuestionIndex = 0;
+        let selectedOption = null;
+        let correctAnswers = new Set();
+        let answeredQuestions = new Set();
+        let questionOrder = [];
+        let userAnswers = [];
+        let attemptCount = 1;
+        let attemptHistory = [];
+        let currentAttemptAnswers = [];
+        let allAttemptsDetails = []; // Detailed record of all attempts
+
+        // DOM elements
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const nameScreen = document.getElementById('name-screen');
+        const quizSection = document.getElementById('quiz-section');
+        const completionScreen = document.getElementById('completion-screen');
+        
+        const questionElement = document.getElementById('question');
+        const optionsElement = document.getElementById('options');
+        const submitButton = document.getElementById('submit-btn');
+        const skipButton = document.getElementById('skip-btn');
+        const feedbackElement = document.getElementById('feedback');
+        const questionNumberElement = document.getElementById('question-number');
+        const correctCountElement = document.getElementById('correct-count');
+        const progressBar = document.getElementById('progress-bar');
+        
+        const startButton = document.getElementById('start-btn');
+        const submitNameButton = document.getElementById('submit-name-btn');
+        const userNameInput = document.getElementById('user-name');
+        const completionMessageElement = document.getElementById('completion-message');
+        const certificateSectionElement = document.getElementById('certificate-section');
+        const certificateNameElement = document.getElementById('certificate-name');
+        const completionDateElement = document.getElementById('completion-date');
+        const restartQuizButton = document.getElementById('restart-quiz-btn');
+        const quizResultsElement = document.getElementById('quiz-results');
+        const attemptsInfoElement = document.getElementById('attempts-info');
+        const downloadReportButton = document.getElementById('download-report-btn');
+
+        // Function to shuffle array (Fisher-Yates algorithm)
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Initialize the quiz
+        function initQuiz() {
+            // Create question order (0-29)
+            questionOrder = Array.from({length: 30}, (_, i) => i);
+            // Shuffle the question order
+            questionOrder = shuffleArray(questionOrder);
+            
+            // Event listeners
+            startButton.addEventListener('click', showNameScreen);
+            submitNameButton.addEventListener('click', startQuiz);
+            submitButton.addEventListener('click', checkAnswer);
+            skipButton.addEventListener('click', skipQuestion);
+            restartQuizButton.addEventListener('click', restartQuiz);
+            downloadReportButton.addEventListener('click', downloadQuizReport);
+            
+            // Allow Enter key in name input
+            userNameInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    startQuiz();
+                }
+            });
+        }
+
+        // Show name input screen
+        function showNameScreen() {
+            welcomeScreen.classList.add('hidden');
+            nameScreen.classList.remove('hidden');
+            userNameInput.focus();
+        }
+
+        // Start the quiz
+        function startQuiz() {
+            userName = userNameInput.value.trim();
+            
+            if (!userName) {
+                alert("Please enter your name to continue.");
+                return;
+            }
+            
+            nameScreen.classList.add('hidden');
+            quizSection.classList.remove('hidden');
+            
+            currentQuestionIndex = 0;
+            userAnswers = Array(30).fill(null);
+            currentAttemptAnswers = Array(30).fill(null);
+            
+            // Record start time for this attempt
+            const startTime = new Date();
+            
+            // Initialize attempt details
+            currentAttemptDetails = {
+                attemptNumber: attemptCount,
+                startTime: startTime,
+                endTime: null,
+                answers: [],
+                score: 0
+            };
+            
+            loadQuestion();
+        }
+
+        // Load a question
+        function loadQuestion() {
+            feedbackElement.innerHTML = '';
+            feedbackElement.className = 'feedback';
+            
+            if (currentQuestionIndex >= questionOrder.length) {
+                // If we've gone through all questions, check completion status
+                if (correctAnswers.size >= 30) {
+                    // Save this attempt before showing completion
+                    saveCurrentAttempt();
+                    showCompletionScreen(true);
+                    return;
+                } else if (answeredQuestions.size >= 30) {
+                    // Save this attempt before showing completion
+                    saveCurrentAttempt();
+                    showCompletionScreen(false);
+                    return;
+                } else {
+                    // Reset to first unanswered question
+                    for (let i = 0; i < questionOrder.length; i++) {
+                        if (!answeredQuestions.has(questionOrder[i])) {
+                            currentQuestionIndex = i;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            let questionIndex = questionOrder[currentQuestionIndex];
+            let questionData = quizQuestions[questionIndex];
+            
+            // Display the question
+            questionElement.textContent = questionData.question;
+            questionNumberElement.textContent = questionIndex + 1;
+            
+            // Clear previous options
+            optionsElement.innerHTML = '';
+            
+            // Add options
+            questionData.options.forEach((option, index) => {
+                const optionElement = document.createElement('div');
+                optionElement.className = 'option';
+                optionElement.textContent = option;
+                optionElement.dataset.index = index;
+                optionElement.addEventListener('click', selectOption);
+                optionsElement.appendChild(optionElement);
+                
+                // If this option was previously selected, mark it
+                if (userAnswers[questionIndex] === index) {
+                    optionElement.classList.add('selected');
+                    selectedOption = index;
+                    submitButton.disabled = false;
+                }
+            });
+            
+            if (userAnswers[questionIndex] === null) {
+                selectedOption = null;
+                submitButton.disabled = true;
+            }
+            
+            // Update progress
+            updateProgress();
+        }
+
+        // Update progress display
+        function updateProgress() {
+            correctCountElement.textContent = correctAnswers.size;
+            const progress = (correctAnswers.size / 30) * 100;
+            progressBar.style.width = `${progress}%`;
+        }
+
+        // Handle option selection
+        function selectOption(e) {
+            // Remove selected class from all options
+            document.querySelectorAll('.option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked option
+            e.target.classList.add('selected');
+            selectedOption = parseInt(e.target.dataset.index);
+            submitButton.disabled = false;
+        }
+
+        // Skip the current question
+        function skipQuestion() {
+            // Move to next question
+            currentQuestionIndex++;
+            loadQuestion();
+        }
+
+        // Check the answer
+        function checkAnswer() {
+            let questionIndex = questionOrder[currentQuestionIndex];
+            let questionData = quizQuestions[questionIndex];
+            let correctAnswerIndex = questionData.correctAnswer;
+            
+            // Store user's answer
+            userAnswers[questionIndex] = selectedOption;
+            currentAttemptAnswers[questionIndex] = selectedOption;
+            
+            // Record this answer in the current attempt details
+            currentAttemptDetails.answers[questionIndex] = {
+                questionIndex: questionIndex,
+                question: questionData.question,
+                userAnswer: selectedOption,
+                userAnswerText: questionData.options[selectedOption],
+                correctAnswer: correctAnswerIndex,
+                correctAnswerText: questionData.options[correctAnswerIndex],
+                isCorrect: selectedOption === correctAnswerIndex,
+                timestamp: new Date()
+            };
+            
+            // Mark question as answered
+            answeredQuestions.add(questionIndex);
+            
+            const isCorrect = selectedOption === correctAnswerIndex;
+            
+            if (isCorrect) {
+                correctAnswers.add(questionIndex);
+                feedbackElement.textContent = "Correct!";
+                feedbackElement.className = "feedback success";
+            } else {
+                // Remove from correct answers if it was previously correct
+                correctAnswers.delete(questionIndex);
+                feedbackElement.textContent = "Incorrect. Please try again or skip to continue.";
+                feedbackElement.className = "feedback error";
+            }
+            
+            // Check if all questions are answered correctly
+            if (correctAnswers.size >= 30) {
+                setTimeout(() => {
+                    saveCurrentAttempt();
+                    showCompletionScreen(true);
+                }, 2000);
+                return;
+            }
+            
+            // Check if all questions are answered (but not all correct)
+            if (answeredQuestions.size >= 30 && correctAnswers.size < 30) {
+                setTimeout(() => {
+                    saveCurrentAttempt();
+                    showCompletionScreen(false);
+                }, 2000);
+                return;
+            }
+            
+            // Move to next question after a delay
+            setTimeout(() => {
+                currentQuestionIndex++;
+                loadQuestion();
+            }, 2000);
+        }
+
+        // Save the current attempt
+        function saveCurrentAttempt() {
+            // Set end time
+            currentAttemptDetails.endTime = new Date();
+            currentAttemptDetails.score = correctAnswers.size;
+            
+            // Add to all attempts details
+            allAttemptsDetails.push(currentAttemptDetails);
+            
+            const incorrectAnswers = [];
+            
+            for (let i = 0; i < quizQuestions.length; i++) {
+                if (currentAttemptAnswers[i] !== null && currentAttemptAnswers[i] !== quizQuestions[i].correctAnswer) {
+                    incorrectAnswers.push({
+                        questionIndex: i,
+                        question: quizQuestions[i].question,
+                        userAnswer: quizQuestions[i].options[currentAttemptAnswers[i]],
+                        correctAnswer: quizQuestions[i].options[quizQuestions[i].correctAnswer]
+                    });
+                }
+            }
+            
+            attemptHistory.push({
+                attemptNumber: attemptCount,
+                score: correctAnswers.size,
+                incorrectAnswers: incorrectAnswers
+            });
+            
+            attemptCount++;
+        }
+
+        // Show completion screen
+        function showCompletionScreen(passed) {
+            quizSection.classList.add('hidden');
+            completionScreen.classList.remove('hidden');
+            
+            if (passed) {
+                // Perfect score - show certificate
+                completionMessageElement.innerHTML = `
+                    <div class="perfect-score">🎉 Congratulations ${userName}! 🎉</div>
+                    <p>You have successfully completed the Using Anthropic for Drafting Quiz with a perfect score of 30/30!</p>
+                `;
+                
+                certificateSectionElement.classList.remove('hidden');
+                certificateNameElement.textContent = userName;
+                
+                const today = new Date();
+                completionDateElement.textContent = today.toLocaleDateString();
+                
+                // Display attempts information
+                displayAttemptsInfo();
+                
+                // Display quiz results
+                displayQuizResults();
+            } else {
+                // Did not get perfect score
+                completionMessageElement.innerHTML = `
+                    <div class="incomplete-score">Quiz Completed</div>
+                    <p>Hello ${userName}, you have answered all 30 questions.</p>
+                    <p>Your score: ${correctAnswers.size}/30</p>
+                    <p><strong>You need a perfect score of 30/30 to pass this quiz.</strong></p>
+                    <p>Please try again to achieve the required score.</p>
+                `;
+                
+                // Display incorrect answers
+                const lastAttempt = attemptHistory[attemptHistory.length - 1];
+                if (lastAttempt && lastAttempt.incorrectAnswers.length > 0) {
+                    let incorrectHtml = `<div class="incorrect-answers">
+                        <h3>Incorrect Answers:</h3>
+                        <ul>`;
+                    
+                    lastAttempt.incorrectAnswers.forEach(item => {
+                        incorrectHtml += `<li>
+                            <p><strong>Question ${item.questionIndex + 1}:</strong> ${item.question}</p>
+                            <p>Your answer: ${item.userAnswer}</p>
+                            <p>Correct answer: ${item.correctAnswer}</p>
+                        </li>`;
+                    });
+                    
+                    incorrectHtml += `</ul></div>`;
+                    completionMessageElement.innerHTML += incorrectHtml;
+                }
+                
+                certificateSectionElement.classList.add('hidden');
+            }
+        }
+        
+        // Display attempts information
+        function displayAttemptsInfo() {
+            attemptsInfoElement.innerHTML = `<h3>Attempt Summary:</h3>`;
+            
+            if (attemptHistory.length === 1) {
+                attemptsInfoElement.innerHTML += `<p>Congratulations! You passed on your first attempt with a perfect score of 30/30!</p>`;
+            } else {
+                attemptsInfoElement.innerHTML += `
+                    <p>You completed the quiz successfully on attempt #${attemptHistory.length} with a perfect score of 30/30.</p>
+                    <div class="attempt-history">
+                        <h4>Previous Attempts:</h4>
+                `;
+                
+                for (let i = 0; i < attemptHistory.length - 1; i++) {
+                    const attempt = attemptHistory[i];
+                    attemptsInfoElement.innerHTML += `
+                        <div class="attempt-item">
+                            <p><strong>Attempt #${attempt.attemptNumber}:</strong> Score ${attempt.score}/30</p>
+                            <p>Incorrect answers: ${attempt.incorrectAnswers.length}</p>
+                        </div>
+                    `;
+                }
+                
+                attemptsInfoElement.innerHTML += `</div>`;
+            }
+        }
+        
+        // Display quiz results
+        function displayQuizResults() {
+            quizResultsElement.innerHTML = '<h3>Quiz Results:</h3>';
+            
+            quizQuestions.forEach((question, index) => {
+                const userAnswer = userAnswers[index];
+                const correctAnswer = question.correctAnswer;
+                const isCorrect = userAnswer === correctAnswer;
+                
+                const resultItem = document.createElement('div');
+                resultItem.className = 'result-item';
+                resultItem.innerHTML = `
+                    <p><strong>Question ${index + 1}:</strong> ${question.question}</p>
+                    <p><strong>Your answer:</strong> ${question.options[userAnswer]}</p>
+                    <p><strong>Status:</strong> <span style="color: ${isCorrect ? 'green' : 'red'}">${isCorrect ? 'Correct' : 'Incorrect'}</span></p>
+                `;
+                
+                quizResultsElement.appendChild(resultItem);
+            });
+        }
+
+        // Generate and download quiz report
+        function downloadQuizReport() {
+            // Create report content
+            let reportContent = `Using Anthropic for Drafting Quiz - Report\n`;
+            reportContent += `===============================================================\n\n`;
+            reportContent += `Name: ${userName}\n`;
+            reportContent += `Date: ${new Date().toLocaleDateString()}\n`;
+            reportContent += `Final Score: 30/30\n`;
+            reportContent += `Number of Attempts: ${attemptHistory.length}\n\n`;
+            
+            // Add attempt history
+            reportContent += `ATTEMPT HISTORY\n`;
+            reportContent += `===============\n\n`;
+            
+            allAttemptsDetails.forEach((attempt, index) => {
+                reportContent += `Attempt #${attempt.attemptNumber}\n`;
+                reportContent += `Date: ${attempt.startTime.toLocaleDateString()}\n`;
+                reportContent += `Time Started: ${attempt.startTime.toLocaleTimeString()}\n`;
+                reportContent += `Time Completed: ${attempt.endTime.toLocaleTimeString()}\n`;
+                reportContent += `Score: ${attempt.score}/30\n\n`;
+                
+                reportContent += `Answers for Attempt #${attempt.attemptNumber}:\n`;
+                reportContent += `----------------------------\n`;
+                
+                // Sort answers by question index
+                const sortedAnswers = [...attempt.answers].filter(a => a).sort((a, b) => a.questionIndex - b.questionIndex);
+                
+                sortedAnswers.forEach(answer => {
+                    reportContent += `Question ${answer.questionIndex + 1}: ${answer.question}\n`;
+                    reportContent += `Your Answer: ${answer.userAnswerText}\n`;
+                    reportContent += `Correct Answer: ${answer.correctAnswerText}\n`;
+                    reportContent += `Status: ${answer.isCorrect ? 'Correct' : 'Incorrect'}\n\n`;
+                });
+                
+                reportContent += `\n`;
+            });
+            
+            // Add final quiz results
+            reportContent += `FINAL QUIZ RESULTS\n`;
+            reportContent += `=================\n\n`;
+            
+            quizQuestions.forEach((question, index) => {
+                const lastAttempt = allAttemptsDetails[allAttemptsDetails.length - 1];
+                const answer = lastAttempt.answers[index];
+                
+                if (answer) {
+                    reportContent += `Question ${index + 1}: ${question.question}\n`;
+                    reportContent += `Your Answer: ${question.options[answer.userAnswer]}\n`;
+                    reportContent += `Correct Answer: ${question.options[question.correctAnswer]}\n`;
+                    reportContent += `Status: ${answer.isCorrect ? 'Correct' : 'Incorrect'}\n\n`;
+                }
+            });
+            
+            // Create a blob and download
+            const blob = new Blob([reportContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${userName.replace(/\s+/g, '_')}_Quiz_Report_${new Date().toISOString().slice(0,10)}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Restart the quiz
+        function restartQuiz() {
+            // Reset quiz state but keep attempt history
+            currentQuestionIndex = 0;
+            correctAnswers = new Set();
+            answeredQuestions = new Set();
+            selectedOption = null;
+            userAnswers = Array(30).fill(null);
+            currentAttemptAnswers = Array(30).fill(null);
+            
+            // Shuffle the question order for the new attempt
+            questionOrder = Array.from({length: 30}, (_, i) => i);
+            questionOrder = shuffleArray(questionOrder);
+            
+            // Show welcome screen
+            completionScreen.classList.add('hidden');
+            welcomeScreen.classList.remove('hidden');
+            
+            // Clear name input
+            userNameInput.value = '';
+        }
+
+        // Start the quiz
+        initQuiz();
+    </script>
+</body>
+</html>
